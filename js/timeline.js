@@ -155,12 +155,17 @@ class Timeline {
         const segments = window.app.state.videoSegments || [];
         for (const seg of segments) {
             if (currentTime > seg.startTime + 0.1 && currentTime < seg.endTime - 0.1) {
+                const oldMaxEnd = seg._maxEnd !== undefined ? seg._maxEnd : seg.endTime;
                 const newSeg = {
                     id: 'vseg_' + Date.now(),
                     startTime: currentTime,
                     endTime: seg.endTime,
-                    speed: seg.speed || 1
+                    speed: seg.speed || 1,
+                    _minStart: currentTime,
+                    _maxEnd: oldMaxEnd
                 };
+                // Update original segment bounds
+                seg._maxEnd = currentTime;
                 seg.endTime = currentTime;
                 segments.push(newSeg);
                 // Sort segments by startTime
@@ -474,8 +479,12 @@ class Timeline {
     }
 
     _startVideoDrag(e, seg, type) {
-        // Save the current duration so move can't expand beyond trimmed size
         const currentDuration = seg.endTime - seg.startTime;
+        // Store max bounds: segment can never grow beyond its current edges
+        // This prevents "restoring" trimmed content
+        if (seg._maxEnd === undefined) seg._maxEnd = seg.endTime;
+        if (seg._minStart === undefined) seg._minStart = seg.startTime;
+
         this.dragState = {
             videoSegId: seg.id,
             type,
@@ -574,9 +583,19 @@ class Timeline {
                 seg.startTime = newStart;
                 seg.endTime = newStart + segLen;
             } else if (this.dragState.type === 'resize-left') {
-                seg.startTime = Math.max(0, Math.min(this.dragState.origStart + dt, seg.endTime - minDuration));
+                // During this drag: can go back to origStart but not beyond _minStart
+                const minStart = seg._minStart !== undefined ? seg._minStart : 0;
+                let newStart = this.dragState.origStart + dt;
+                // Clamp: can't go left past minStart, can't go right past endTime
+                newStart = Math.max(minStart, Math.min(newStart, seg.endTime - minDuration));
+                seg.startTime = newStart;
             } else if (this.dragState.type === 'resize-right') {
-                seg.endTime = Math.min(this.duration, Math.max(this.dragState.origEnd + dt, seg.startTime + minDuration));
+                // During this drag: can go back to origEnd but not beyond _maxEnd
+                const maxEnd = seg._maxEnd !== undefined ? seg._maxEnd : this.duration;
+                let newEnd = this.dragState.origEnd + dt;
+                // Clamp: can't go right past maxEnd, can't go left past startTime
+                newEnd = Math.min(maxEnd, Math.max(newEnd, seg.startTime + minDuration));
+                seg.endTime = newEnd;
             }
 
             const segEl = this.tracksEl.querySelector(`[data-seg-id="${seg.id}"]`);
@@ -620,8 +639,18 @@ class Timeline {
 
     _onMouseUp() {
         if (this.dragState) {
+            // Commit trim bounds after resize ends
+            if (this.dragState.videoSegId) {
+                const seg = window.app.state.videoSegments.find(s => s.id === this.dragState.videoSegId);
+                if (seg) {
+                    if (this.dragState.type === 'resize-left') {
+                        seg._minStart = seg.startTime;
+                    } else if (this.dragState.type === 'resize-right') {
+                        seg._maxEnd = seg.endTime;
+                    }
+                }
+            }
             this.dragState = null;
-            // Preserve scroll position during re-render
             const scrollLeft = this.container.scrollLeft;
             const scrollTop = this.container.scrollTop;
             this.render();

@@ -493,7 +493,9 @@ class App {
             this.state.videoSegments = [{
                 id: 'vseg_1',
                 startTime: 0,
-                endTime: duration
+                endTime: duration,
+                _minStart: 0,
+                _maxEnd: duration
             }];
         }
 

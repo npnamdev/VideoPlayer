@@ -571,10 +571,10 @@ input, textarea, select, [contenteditable] {
     background: #12122a;
     cursor: grab;
     transition: box-shadow 0.1s;
-    border-left: 2px solid transparent;
 }
+/* Split divider line between segments - uses inset shadow so no layout shift */
 .video-segment + .video-segment {
-    border-left: 2px solid var(--accent);
+    box-shadow: inset 2px 0 0 0 var(--accent);
 }
 .video-segment:active { cursor: grabbing; }
 .video-segment::before {
@@ -586,11 +586,13 @@ input, textarea, select, [contenteditable] {
     z-index: 3;
 }
 .video-segment:hover {
-    box-shadow: 0 0 0 1px rgba(74,158,237,0.5);
+    outline: 1px solid rgba(124,92,231,0.5);
+    outline-offset: -1px;
     filter: brightness(1.1);
 }
 .video-segment.seg-selected {
-    box-shadow: 0 0 0 2px var(--accent), 0 0 10px rgba(74,158,237,0.25);
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
     z-index: 3;
     filter: brightness(1.15);
 }
