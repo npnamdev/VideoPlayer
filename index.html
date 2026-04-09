@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Zoom & Highlight Editor</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Welcome Screen (shown before video import) -->
+    <div id="welcome-screen" class="welcome-screen">
+        <div id="welcome-drop-zone" class="welcome-drop-zone">
+            <div class="welcome-content">
+                <h1 class="welcome-logo">ZoomEdit</h1>
+                <p class="welcome-sub">Video Zoom & Highlight Editor</p>
+                <div class="welcome-icon">
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                </div>
+                <p class="welcome-text">Keo tha video vao day</p>
+                <button id="btn-import-welcome" class="btn btn-primary welcome-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Chon video tu may
+                </button>
+                <p class="welcome-hint">MP4, WebM, MOV, AVI</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Editor UI (hidden until video loaded) -->
+    <div id="editor-ui" class="editor-ui" style="display:none;">
+
+    <!-- Header Toolbar -->
+    <header class="toolbar">
+        <div class="toolbar-left">
+            <h1 class="logo">ZoomEdit</h1>
+        </div>
+        <div class="toolbar-center">
+            <button id="btn-import" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Import Video
+            </button>
+            <input type="file" id="file-input" accept="video/*" hidden>
+            <button id="btn-export" class="btn btn-success" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export MP4
+            </button>
+        </div>
+        <div class="toolbar-right">
+            <span id="video-info" class="video-info"></span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Video Preview -->
+        <div class="preview-area">
+            <div class="canvas-container" id="canvas-container">
+                <canvas id="preview-canvas"></canvas>
+                <canvas id="overlay-canvas"></canvas>
+                <!-- Drop zone (hidden, kept for compatibility) -->
+                <div id="drop-zone" class="drop-zone hidden">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <p>Keo tha video vao day hoac click "Import Video"</p>
+                </div>
+            </div>
+
+            <!-- Playback Controls -->
+            <div class="playback-controls" id="playback-controls" style="display:none;">
+                <button id="btn-play" class="btn-control" title="Play/Pause (Space)">
+                    <svg id="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <svg id="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                </button>
+                <span id="time-current" class="time-display">00:00.000</span>
+                <input type="range" id="seek-bar" class="seek-bar" min="0" max="1000" value="0">
+                <span id="time-duration" class="time-display">00:00.000</span>
+                <div class="speed-control">
+                    <label>Speed:</label>
+                    <select id="playback-speed">
+                        <option value="0.05">0.05x</option>
+                        <option value="0.1">0.1x</option>
+                        <option value="0.25">0.25x</option>
+                        <option value="0.5">0.5x</option>
+                        <option value="0.75">0.75x</option>
+                        <option value="1" selected>1x</option>
+                        <option value="1.5">1.5x</option>
+                        <option value="2">2x</option>
+                        <option value="3">3x</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Properties Panel -->
+        <aside class="properties-panel" id="properties-panel">
+            <h3 class="panel-title">Properties</h3>
+            <div id="properties-content" class="properties-content">
+                <p class="placeholder-text">Select a clip on the timeline to edit its properties</p>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Timeline -->
+    <section class="timeline-section" id="timeline-section" style="display:none;">
+        <!-- Timeline top toolbar (like Canva) -->
+        <div class="timeline-toolbar">
+            <div class="timeline-toolbar-left">
+                <button id="btn-undo" class="btn-icon" title="Undo (Ctrl+Z)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                </button>
+                <button id="btn-redo" class="btn-icon" title="Redo (Ctrl+Y)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"/></svg>
+                </button>
+                <div class="toolbar-divider"></div>
+                <button id="btn-split" class="btn-icon-label" title="Split clip at playhead">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><polyline points="8 6 12 2 16 6"/><polyline points="8 18 12 22 16 18"/></svg>
+                    Split
+                </button>
+            </div>
+            <div class="timeline-toolbar-center">
+                <button id="btn-play-tl" class="btn-icon btn-play-timeline" title="Play/Pause (Space)">
+                    <svg id="icon-play-tl" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </button>
+                <span id="time-display-tl" class="time-display-tl">0:00.00 / 0:00.00</span>
+            </div>
+            <div class="timeline-toolbar-right">
+                <div class="track-add-buttons">
+                    <button id="btn-add-zoom" class="btn btn-small btn-zoom" title="Add Zoom Track">+ Zoom</button>
+                    <button id="btn-add-highlight" class="btn btn-small btn-highlight" title="Add Highlight Track">+ Highlight</button>
+                    <button id="btn-add-text" class="btn btn-small btn-text" title="Add Text Track">+ Text</button>
+                </div>
+                <div class="toolbar-divider"></div>
+                <div class="timeline-zoom-controls">
+                    <button id="btn-zoom-out-timeline" class="btn-icon" title="Zoom Out">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                    <input type="range" id="timeline-zoom-slider" class="timeline-zoom-slider" min="20" max="400" value="80">
+                    <button id="btn-zoom-in-timeline" class="btn-icon" title="Zoom In">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                    <button id="btn-fit-timeline" class="btn-icon-label btn-tiny" title="Fit">Fit</button>
+                </div>
+            </div>
+        </div>
+        <div class="timeline-container" id="timeline-container">
+            <!-- Timeline ruler -->
+            <div class="timeline-ruler" id="timeline-ruler"></div>
+            <!-- Playhead -->
+            <div class="timeline-playhead" id="timeline-playhead"></div>
+            <!-- Tracks (effect tracks + video preview at bottom) -->
+            <div class="timeline-tracks" id="timeline-tracks"></div>
+        </div>
+    </section>
+
+    </div><!-- end editor-ui -->
+
+    <!-- Export Modal -->
+    <div class="modal-overlay" id="export-modal" style="display:none;">
+        <div class="modal">
+            <h3>Export Video</h3>
+            <div class="export-options">
+                <label>Resolution:
+                    <select id="export-resolution">
+                        <option value="original">Original</option>
+                        <option value="1080">1080p</option>
+                        <option value="720">720p</option>
+                        <option value="480">480p</option>
+                    </select>
+                </label>
+                <label>Quality:
+                    <select id="export-quality">
+                        <option value="8000000">High (8 Mbps)</option>
+                        <option value="5000000" selected>Medium (5 Mbps)</option>
+                        <option value="2500000">Low (2.5 Mbps)</option>
+                    </select>
+                </label>
+            </div>
+            <div class="export-progress" id="export-progress" style="display:none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="export-progress-fill"></div>
+                </div>
+                <span id="export-progress-text">0%</span>
+            </div>
+            <div class="modal-actions">
+                <button id="btn-start-export" class="btn btn-success">Start Export</button>
+                <button id="btn-cancel-export" class="btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden video element -->
+    <video id="source-video" style="display:none;" preload="auto"></video>
+
+    <!-- FFmpeg WASM for MP4 export -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/util.js"></script>
+
+    <script src="js/effects.js"></script>
+    <script src="js/video-player.js"></script>
+    <script src="js/timeline.js"></script>
+    <script src="js/exporter.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
